@@ -90,3 +90,11 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# terraform
+otherscripts/terraform/.terraform/*
+otherscripts/terraform/.terraform*
+otherscripts/terraform/terraform*
+
+*.csv
+./*.csv
