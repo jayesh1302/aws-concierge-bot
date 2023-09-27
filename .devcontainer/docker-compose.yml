@@ -1,0 +1,21 @@
+---
+# Python 3 with PostgreSQL
+version: "3"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    hostname: nyu
+    container_name: cloud-computing-assignment
+    volumes:
+      - ..:/app
+    command: sleep infinity
+    environment:
+      PORT: 8080
+    networks:
+      - dev
+
+networks:
+  dev:
