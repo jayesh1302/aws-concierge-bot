@@ -15,15 +15,15 @@ def get_business_attributes(business, location, cuisine_type):
         if not business.get(opt_f, None):
             continue
         attributes_dictionary[opt_f] =  business.get(opt_f)
-    if not business.get("coordinates", None):
-        if not business['location'].get('latitude', None):
+    if business.get("coordinates", None):
+        if business['coordinates'].get('latitude', None):
             attributes_dictionary["latitude"] = business["coordinates"]['latitude']
-        if not business['location'].get('longitude', None):
+        if business['coordinates'].get('longitude', None):
             attributes_dictionary["longitude"] = business["coordinates"]['longitude']
-    if not business.get('location', None):
-        if not business['location'].get('display_address', None):
+    if business.get('location', None):
+        if business['location'].get('display_address', None):
             attributes_dictionary['address'] = "".join(business['location']['display_address'])
-        if not business['location'].get('zip_code', None):
+        if business['location'].get('zip_code', None):
             attributes_dictionary['zip_code'] = business['location']['zip_code']
     return attributes_dictionary
 
@@ -72,9 +72,8 @@ if __name__ == '__main__':
     
     CUISINES = [
         "chinese",
-        # "indpak",
-        # "italian",
-        # "mexican"
+        "indpak",
+        "italian"
     ]
     AMOUNT=50
     LOCATION="manhattan"
