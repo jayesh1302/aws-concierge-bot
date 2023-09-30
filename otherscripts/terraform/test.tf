@@ -1,10 +1,13 @@
-provider "aws" {
-  region = "us-east-1"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.19.0"
+    }
+  }
 }
 
-locals {
-  json_data = file("test.json")
-  tf_data   = jsondecode(local.json_data)
+provider "aws" {
 }
 
 resource "aws_dynamodb_table" "dynamodb_table" {
@@ -17,9 +20,15 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   }
 }
 
-resource "aws_dynamodb_table_item" "dynamodb_table_item" {
-  for_each   = local.tf_data
-  table_name = aws_dynamodb_table.dynamodb_table.name
-  hash_key   = "id"
-  item       = jsonencode(each.value)
+resource "aws_opensearch_domain" "opensearch" {
+  domain_name    = "restaurants"
+  engine_version = "Elasticsearch_7.10"
+
+  cluster_config {
+    instance_type = "t3.small.search"
+  }
+  ebs_options {
+    ebs_enabled = true
+    volume_size = 10
+  }
 }
