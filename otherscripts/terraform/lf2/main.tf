@@ -10,9 +10,38 @@ terraform {
 provider "aws" {
 }
 
+resource "aws_sqs_queue" "Q1_test" {
+  name = "Q1-test"
+}
+
+output "Q1_test_url" {
+  description = "URL for SQS Q1 test"
+  value       = aws_sqs_queue.Q1_test.url
+}
+
+data "aws_iam_policy_document" "Q1_test_iam_policy" {
+  statement {
+    sid    = "First"
+    effect = "Allow"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["sqs:SendMessage"]
+    resources = [aws_sqs_queue.Q1_test.arn]
+  }
+}
+
+resource "aws_sqs_queue_policy" "test" {
+  queue_url = aws_sqs_queue.Q1_test.id
+  policy    = data.aws_iam_policy_document.Q1_test_iam_policy.json
+}
+
 data "archive_file" "python_lambda_package" {
   type        = "zip"
-  source_file = "${path.module}/../../lf2.py"
+  source_dir = "${path.module}/package"
   output_path = "lf2.zip"
 }
 
@@ -50,6 +79,11 @@ resource "aws_lambda_function" "lf2" {
   runtime       = "python3.11"
   handler       = "lf2.lambda_handler"
   role          = aws_iam_role.lambda_exec.arn
+  environment {
+    variables = {
+      SNS_Q1_URL = aws_sqs_queue.Q1_test.url
+    }
+  }
 }
 
 # CloudWatch trigger
@@ -73,3 +107,6 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
   source_arn    = aws_cloudwatch_event_rule.lf2_trigger.arn
 }
 
+resource "aws_ses_email_identity" "example" {
+  email = "nicksome.yc@gmail.com"
+}
