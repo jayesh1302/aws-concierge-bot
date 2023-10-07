@@ -22,6 +22,7 @@ def lambda_handler(event, context):
     queue_url = sqs.get_queue_url(QueueName='Q1-test')['QueueUrl']
     print("Polling from: {}".format(queue_url))
     queries = []
+    messages = []
     while True:
         response = sqs.receive_message(QueueUrl=queue_url,
                                        MaxNumberOfMessages=10,
@@ -32,6 +33,7 @@ def lambda_handler(event, context):
         for msg in response['Messages']:
             q = json.loads(msg['Body'])
             queries.append(q)
+        messages += response['Messages']
     if not queries:
         response = {
                 "statusCode": 500,
@@ -44,7 +46,7 @@ def lambda_handler(event, context):
     restaurant_ids = _query_opensearch_(queries)
     restaurant_infos = _query_dynamno_(restaurant_ids)
     _send_ses_(queries, restaurant_infos)
-    # _delete_sqs_msg(sqs, queue_url, messages)
+    _delete_sqs_msg(sqs, queue_url, messages)
     response = {
         "statusCode": 200,
         "headers": {
@@ -85,6 +87,7 @@ def _query_dynamno_(restaurant_ids):
     db = boto3.client('dynamodb')
     restaurant_infos = []
     for _id in restaurant_ids:
+        print(_id)
         data = db.get_item(
             TableName='yelp-restaurants',
             Key={
@@ -131,6 +134,7 @@ def _query_opensearch_(queries):
                 "body": r.text
             }
             return response
+        print(r)
         _id = json.loads(r.text)['hits']['hits'][0]['_source']['id']
         restaurant_ids.append(_id)
     return restaurant_ids
