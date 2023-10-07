@@ -82,7 +82,7 @@ if __name__ == '__main__':
     awsauth = AWS4Auth(credentials.access_key,
                        credentials.secret_key, 'us-east-1', 'es')
     es = Elasticsearch(
-        hosts=[getenv('ES_HOST')],
+        hosts=[getenv('TF_VAR_es_host')],
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,

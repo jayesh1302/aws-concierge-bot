@@ -10,6 +10,10 @@ terraform {
 provider "aws" {
 }
 
+variable "sender_email" {}
+
+variable "es_host" {}
+
 resource "aws_sqs_queue" "Q1_test" {
   name = "Q1-test"
 }
@@ -41,7 +45,7 @@ resource "aws_sqs_queue_policy" "test" {
 
 data "archive_file" "python_lambda_package" {
   type        = "zip"
-  source_dir = "${path.module}/package"
+  source_dir  = "${path.module}/package"
   output_path = "lf2.zip"
 }
 
@@ -65,8 +69,10 @@ resource "aws_iam_role" "lambda_exec" {
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
   for_each = toset([
     "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
-
+    "arn:aws:iam::aws:policy/AmazonSQSFullAccess",
+    "arn:aws:iam::aws:policy/AmazonOpenSearchServiceReadOnlyAccess",
+    "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess",
+    "arn:aws:iam::aws:policy/AmazonSESFullAccess"
   ])
 
   role       = aws_iam_role.lambda_exec.name
@@ -79,9 +85,11 @@ resource "aws_lambda_function" "lf2" {
   runtime       = "python3.11"
   handler       = "lf2.lambda_handler"
   role          = aws_iam_role.lambda_exec.arn
+  timeout       = 15
   environment {
     variables = {
-      SNS_Q1_URL = aws_sqs_queue.Q1_test.url
+      TF_VAR_es_host      = var.es_host,
+      TF_VAR_sender_email = var.sender_email
     }
   }
 }
@@ -90,7 +98,7 @@ resource "aws_lambda_function" "lf2" {
 resource "aws_cloudwatch_event_rule" "lf2_trigger" {
   name                = "lf2-trigger"
   description         = "Schedule lf2 function"
-  schedule_expression = "rate(1 minute)"
+  schedule_expression = "rate(60 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "lf2_target" {
@@ -107,6 +115,7 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
   source_arn    = aws_cloudwatch_event_rule.lf2_trigger.arn
 }
 
+
 resource "aws_ses_email_identity" "example" {
-  email = "nicksome.yc@gmail.com"
+  email = var.sender_email
 }
