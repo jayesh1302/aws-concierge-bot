@@ -133,19 +133,19 @@ resource "aws_opensearch_domain" "opensearch" {
     ebs_enabled = true
     volume_size = 10
   }
-  access_policies = <<POLICY
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Action": "es:*",
-        "Principal": {
-          "AWS": ${aws_iam_role.lambda_exec.arn}
-        },
-        "Effect": "Allow",
-        "Resource": "arn:aws:es:us-east-1:${data.aws_caller_identity.current.account_id}:domain/restaurants/*",
-      }
-    ]
-  }
-  POLICY
+  access_policies = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+          "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.lambda_exec.name}"
+      },
+      "Action": "es:*",
+      "Resource": "arn:aws:es:us-east-1:${data.aws_caller_identity.current.account_id}:domain/restaurants/*"
+    }
+  ]
+}
+EOF
 }
