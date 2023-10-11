@@ -19,7 +19,7 @@ url = host + '/' + index + '/_search'
 
 def lambda_handler(event, context):
     sqs = boto3.client('sqs')
-    queue_url = sqs.get_queue_url(QueueName='Q1-test')['QueueUrl']
+    queue_url = getenv('TF_VAR_sqs_url')
     print("Polling from: {}".format(queue_url))
     queries = []
     messages = []

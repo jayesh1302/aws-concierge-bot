@@ -36,6 +36,8 @@ resource "aws_sqs_queue_policy" "test" {
 /*-----------------LB2-----------------*/
 variable "sender_email" {}
 variable "es_host" {}
+variable "sqs_url" {}
+
 data "archive_file" "python_lambda_package" {
   type        = "zip"
   source_dir  = "${path.module}/lf2/package"
@@ -80,6 +82,7 @@ resource "aws_lambda_function" "lf2" {
     variables = {
       TF_VAR_es_host      = var.es_host,
       TF_VAR_sender_email = var.sender_email
+      TF_VAR_sqs_url      = var.sqs_url
     }
   }
 }
@@ -88,7 +91,7 @@ resource "aws_lambda_function" "lf2" {
 resource "aws_cloudwatch_event_rule" "lf2_trigger" {
   name                = "lf2-trigger"
   description         = "Schedule lf2 function"
-  schedule_expression = "rate(60 minutes)"
+  schedule_expression = "rate(1 minute)"
 }
 resource "aws_cloudwatch_event_target" "lf2_target" {
   target_id = "lf2-target"
