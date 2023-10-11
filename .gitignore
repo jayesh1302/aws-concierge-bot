@@ -100,3 +100,15 @@ otherscripts/terraform/terraform*
 ./*.csv
 *.json
 ./*.json
+
+.terraform*
+*/.terraform
+*/.terraform*
+terraform.tfstate
+*/terraform.tfstate
+terraform.tfstate.backup
+*/terraform.tfstate.backup
+*.zip
+*/*.zip
+*/**/package
+!*/**/package/lf2.py
