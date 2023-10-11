@@ -5,11 +5,12 @@ from os import getenv
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 from dotenv import load_dotenv
+from datetime import datetime
 
 def read_data(fn):
     with open(fn , 'r') as f:
-        lis = json.load(f, parse_float=Decimal)
-    return lis
+        restaurants = json.load(f, parse_float=Decimal)
+    return restaurants
 def drop_table(dyn_resource):
     """
     Deletes the demonstration table.
@@ -33,6 +34,7 @@ def batch_write2db(data, db):
     while batch_size > 0:
         with table.batch_writer() as batch:
             for restaurant in data[start_index:start_index+MAX_BATCH_SIZE]:
+                restaurant["insertedAtTimestamp"] = datetime.now().isoformat()
                 batch.put_item(Item=restaurant)
         start_index += MAX_BATCH_SIZE
         batch_size -= 1
