@@ -17,6 +17,17 @@ host = getenv('TF_VAR_es_host')
 index = 'restaurant'
 url = host + '/' + index + '/_search'
 
+
+def _return_error_response(msg):
+    error_response = {
+                "statusCode": 500,
+                "headers": {
+                    "Access-Control-Allow-Origin": '*'
+                },
+                "body": msg
+            }
+    return error_response
+
 def lambda_handler(event, context):
     sqs = boto3.client('sqs')
     queue_url = getenv('TF_VAR_sqs_url')
@@ -27,7 +38,7 @@ def lambda_handler(event, context):
         response = sqs.receive_message(QueueUrl=queue_url,
                                        MaxNumberOfMessages=10,
                                        WaitTimeSeconds=7
-        )
+                                       )
         if 'Messages' not in response:
             break
         for msg in response['Messages']:
@@ -35,17 +46,19 @@ def lambda_handler(event, context):
             queries.append(q)
         messages += response['Messages']
     if not queries:
-        response = {
-                "statusCode": 500,
-                "headers": {
-                    "Access-Control-Allow-Origin": '*'
-                },
-                "body": "SNS poll fail or queue is empty. Try again later."
-            }
-        return response
-    restaurant_ids = _query_opensearch_(queries)
-    restaurant_infos = _query_dynamno_(restaurant_ids)
-    _send_ses_(queries, restaurant_infos)
+        return _return_error_response("SQS poll fail or queue is empty. Try again later.")
+    try:
+        restaurant_ids = _query_opensearch_(queries)
+    except Exception as e:
+        return _return_error_response(str(e))
+    try:
+        restaurant_infos = _query_dynamno_(restaurant_ids)
+    except Exception as e:
+        return _return_error_response(str(e))
+    try:
+        _send_ses_(queries, restaurant_infos)
+    except Exception as e:
+        return _return_error_response(str(e))
     _delete_sqs_msg(sqs, queue_url, messages)
     response = {
         "statusCode": 200,
@@ -60,8 +73,8 @@ def _send_ses_(queries, restaurant_infos):
     ses = boto3.client("ses")
     CHARSET = "UTF-8"
     for q, info in zip(queries, restaurant_infos):
-        email_text = "Hello!\nHere are my {} restaurant suggestions for {} people, for {}:\n1. {}, located at {}"\
-        .format(q['cuisine'], q['num_ppl'], q['time'], info['name']['S'], info['address']['S'])
+        email_text = "Hello!\nHere are my {} restaurant suggestions for {} people, for {} at {}:\n1. {}, located at {}"\
+        .format(q['cuisine'], q['num_ppl'], q['date'], q['time'], info['name']['S'], info['address']['S'])
         dest_email = q['email']
         _ = ses.send_email(
             Destination={
@@ -81,13 +94,11 @@ def _send_ses_(queries, restaurant_infos):
             },
             Source=getenv('TF_VAR_sender_email'),
         )
-        
 
 def _query_dynamno_(restaurant_ids):
     db = boto3.client('dynamodb')
     restaurant_infos = []
     for _id in restaurant_ids:
-        print(_id)
         data = db.get_item(
             TableName='yelp-restaurants',
             Key={
@@ -113,7 +124,7 @@ def _query_opensearch_(queries):
                         "bool": {
                             "filter": [{
                                 "term": {
-                                    "cuisine": q['cuisine']
+                                    "cuisine": q['cuisine'].lower()
                                 }
                             }],
                         }
@@ -134,7 +145,6 @@ def _query_opensearch_(queries):
                 "body": r.text
             }
             return response
-        print(r)
         _id = json.loads(r.text)['hits']['hits'][0]['_source']['id']
         restaurant_ids.append(_id)
     return restaurant_ids
