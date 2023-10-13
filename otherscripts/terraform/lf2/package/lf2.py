@@ -3,6 +3,9 @@ import json
 import requests
 from requests_aws4auth import AWS4Auth
 from os import getenv
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 region = 'us-east-1'
 service = 'es'
@@ -13,25 +16,23 @@ awsauth = AWS4Auth(credentials.access_key,
                    service,
                    session_token=credentials.token
                    )
-host = getenv('TF_VAR_es_host')
 index = 'restaurant'
-url = host + '/' + index + '/_search'
+queue_url = getenv('TF_VAR_sqs_url')
+url = getenv('TF_VAR_es_host') + '/' + index + '/_search'
 
-
-def _return_error_response(msg):
-    error_response = {
-                "statusCode": 500,
+def _return_response(msg, statusCode):
+    response = {
+                "statusCode": statusCode,
                 "headers": {
                     "Access-Control-Allow-Origin": '*'
                 },
                 "body": msg
             }
-    return error_response
+    return response
 
 def lambda_handler(event, context):
     sqs = boto3.client('sqs')
-    queue_url = getenv('TF_VAR_sqs_url')
-    print("Polling from: {}".format(queue_url))
+    logger.info("Polling from: {}".format(queue_url))
     queries = []
     messages = []
     while True:
@@ -41,33 +42,19 @@ def lambda_handler(event, context):
                                        )
         if 'Messages' not in response:
             break
-        for msg in response['Messages']:
-            q = json.loads(msg['Body'])
-            queries.append(q)
         messages += response['Messages']
     if not queries:
-        return _return_error_response("SQS poll fail or queue is empty. Try again later.")
+        return _return_response("SQS poll fail or queue is empty. Try again later.", 500)
+    for msg in messages:
+        queries.append(json.loads(msg['Body']))
+    _delete_sqs_msg(sqs, queue_url, messages)
     try:
         restaurant_ids = _query_opensearch_(queries)
-    except Exception as e:
-        return _return_error_response(str(e))
-    try:
         restaurant_infos = _query_dynamno_(restaurant_ids)
-    except Exception as e:
-        return _return_error_response(str(e))
-    try:
         _send_ses_(queries, restaurant_infos)
     except Exception as e:
-        return _return_error_response(str(e))
-    _delete_sqs_msg(sqs, queue_url, messages)
-    response = {
-        "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Origin": '*'
-        },
-        "body": "Recommendations have been sent out!"
-    }
-    return response
+        return _return_response(str(e), 500)
+    return _return_response("Recommendations have been sent out!", 200)
 
 def _send_ses_(queries, restaurant_infos):
     ses = boto3.client("ses")
@@ -135,16 +122,14 @@ def _query_opensearch_(queries):
                 },
             }
         }
-        r = requests.get(url, auth=awsauth, headers=headers, data=json.dumps(query))
+        r = requests.get(url,
+                         auth=awsauth,
+                         headers=headers,
+                         data=json.dumps(query),
+                         timeout=10
+                         )
         if r.status_code != 200:
-            response = {
-                "statusCode": 500,
-                "headers": {
-                    "Access-Control-Allow-Origin": '*'
-                },
-                "body": r.text
-            }
-            return response
+            raise Exception("OpenSearch query failed: {}".format(r.text))
         _id = json.loads(r.text)['hits']['hits'][0]['_source']['id']
         restaurant_ids.append(_id)
     return restaurant_ids
@@ -156,7 +141,7 @@ def _delete_sqs_msg(sqs, queue_url, messages):
             QueueUrl=queue_url,
             ReceiptHandle=message['ReceiptHandle']
         )
-        # print(dlt_response['ResponseMetadata']['HTTPStatusCode'])
+        logger.info("SQS delete message response: {}".format(dlt_response['ResponseMetadata']['HTTPStatusCode']))
 
 if __name__ == '__main__':
     lambda_handler(1,1)
