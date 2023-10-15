@@ -110,5 +110,3 @@ terraform.tfstate.backup
 */terraform.tfstate.backup
 *.zip
 */*.zip
-*/**/package
-!*/**/package/lf2.py

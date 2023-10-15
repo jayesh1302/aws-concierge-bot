@@ -29,7 +29,8 @@
 				"ms-azuretools.vscode-docker",
 				"streetsidesoftware.code-spell-checker",
 				"mechatroner.rainbow-csv",
-				"HashiCorp.terraform"
+				"HashiCorp.terraform",
+				"GitHub.copilot"
 			]
 		}
 	},
