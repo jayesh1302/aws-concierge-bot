@@ -33,7 +33,6 @@ def _return_response(msg, statusCode):
 def lambda_handler(event, context):
     sqs = boto3.client('sqs')
     logger.info("Polling from: {}".format(queue_url))
-    queries = []
     messages = []
     while True:
         response = sqs.receive_message(QueueUrl=queue_url,
@@ -51,6 +50,7 @@ def lambda_handler(event, context):
     for msg in messages:
         queries.append(json.loads(msg['Body']))
     try:
+        _delete_sqs_msg(sqs, queue_url, messages)
         restaurant_ids = _query_opensearch_(queries)
         restaurant_infos = _query_dynamno_(restaurant_ids)
         _send_ses_(queries, restaurant_infos)
