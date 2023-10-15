@@ -40,8 +40,8 @@ variable "sqs_url" {}
 
 data "archive_file" "python_lambda_package" {
   type        = "zip"
-  source_dir  = "${path.module}/lf2/package"
-  output_path = "lf2.zip"
+  source_dir  = "${path.module}/../../lambdafunctions/LF2/package"
+  output_path = "${path.module}/../../lambdafunctions/LF2/package/LF2.zip"
 }
 resource "aws_iam_role" "lambda_exec" {
   name = "lf2-role"
@@ -73,7 +73,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 }
 resource "aws_lambda_function" "lf2" {
   function_name = "LF2"
-  filename      = "lf2.zip"
+  filename      = "${path.module}/../../lambdafunctions/LF2/package/LF2.zip"
   runtime       = "python3.11"
   handler       = "lf2.lambda_handler"
   role          = aws_iam_role.lambda_exec.arn
