@@ -43,18 +43,25 @@ def lambda_handler(event, context):
         if 'Messages' not in response:
             break
         messages += response['Messages']
-    if not queries:
-        return _return_response("SQS poll fail or queue is empty. Try again later.", 500)
+    if not messages:
+        msg = _return_response("SQS poll fail or queue is empty. Try again later.", 200)
+        logger.error(msg)
+        return msg
+    queries = []
     for msg in messages:
         queries.append(json.loads(msg['Body']))
-    _delete_sqs_msg(sqs, queue_url, messages)
     try:
         restaurant_ids = _query_opensearch_(queries)
         restaurant_infos = _query_dynamno_(restaurant_ids)
         _send_ses_(queries, restaurant_infos)
+        _delete_sqs_msg(sqs, queue_url, messages)
     except Exception as e:
-        return _return_response(str(e), 500)
-    return _return_response("Recommendations have been sent out!", 200)
+        msg = _return_response(str(e), 500)
+        logger.error(msg)
+        return msg
+    msg = _return_response("Recommendations have been sent out!", 200)
+    logger.info(msg)
+    return msg
 
 def _send_ses_(queries, restaurant_infos):
     ses = boto3.client("ses")
