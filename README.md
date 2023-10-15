@@ -35,4 +35,6 @@ terraform apply
 # delete the changes
 terraform destroy
 ```
-
+# Chatbot Recording
+Chatbot_Recording.wmv is available which shows the first MVP screen recording. More features may have been added by the time the assignment is submitted. 
+Features from the problem statement are covered by the first MVP. 
