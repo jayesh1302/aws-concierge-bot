@@ -1,6 +1,7 @@
-export AWS_ACCESS_KEY_ID =
-export AWS_SECRET_ACCESS_KEY =
-export AWS_REGION =
-export TF_VAR_es_host =
-export YELP_API_KEY =
-export TF_VAR_sender_email =
+// export AWS_ACCESS_KEY_ID=
+// export AWS_SECRET_ACCESS_KEY=
+// export AWS_REGION=
+// export TF_VAR_es_host=
+// export YELP_API_KEY=
+// export TF_VAR_sender_email=
+// export TF_VAR_sqs_url=
