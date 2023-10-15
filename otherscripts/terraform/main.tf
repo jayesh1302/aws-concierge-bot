@@ -40,7 +40,7 @@ variable "sqs_url" {}
 
 data "archive_file" "python_lambda_package" {
   type        = "zip"
-  source_dir  = "${path.module}/lf2/package"
+  source_dir  = "${path.module}/../../lambdafunctions/lf2/package"
   output_path = "lf2.zip"
 }
 resource "aws_iam_role" "lambda_exec" {
