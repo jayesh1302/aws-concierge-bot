@@ -9,6 +9,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 MAX_BATCH_SIZE=25
+NUM_RECOMMENDATIONS=3
 region = 'us-east-1'
 service = 'es'
 credentials = boto3.Session(region_name=region).get_credentials()
@@ -68,9 +69,11 @@ def lambda_handler(event, context):
 def _send_ses_(queries, restaurant_infos):
     ses = boto3.client("ses")
     CHARSET = "UTF-8"
-    for q, info in zip(queries, restaurant_infos):
-        email_text = "Hello!\nHere are my {} restaurant suggestions for {} people, for {} at {}:\n1. {}, located at {}"\
-        .format(q['cuisine'], q['num_ppl'], q['date'], q['time'], info['name']['S'], info['address']['S'])
+    for q, infos in zip(queries, restaurant_infos):
+        email_text = "Hello!\nHere are my {} restaurant suggestions for {} people, for {} at {}:\n"\
+            .format(q['cuisine'], q['num_ppl'], q['date'], q['time'])
+        for i, info in enumerate(infos):
+            email_text += "{}. {}, located at {}\n".format(str(i+1), info['name']['S'], info['address']['S'])
         dest_email = q['email']
         _ = ses.send_email(
             Destination={
@@ -113,16 +116,19 @@ def _save_recommendation_(queries, restaurant_infos) -> None:
 def _query_dynamno_(restaurant_ids):
     db = boto3.client('dynamodb')
     restaurant_infos = []
-    for _id in restaurant_ids:
-        data = db.get_item(
-            TableName='yelp-restaurants',
-            Key={
-                'id': {
-                    'S': str(_id)
+    for _ids in restaurant_ids:
+        infos = []
+        for _id in _ids:
+            data = db.get_item(
+                TableName='yelp-restaurants',
+                Key={
+                    'id': {
+                        'S': str(_id)
+                    }
                 }
-            }
-        )
-        restaurant_infos.append(data['Item'])
+            )
+            infos.append(data['Item'])
+        restaurant_infos.append(infos)
     return restaurant_infos
 
 
@@ -132,7 +138,7 @@ def _query_opensearch_(queries):
     for q in queries:
         headers = { "Content-Type": "application/json" }
         query = {
-            "size": 1,
+            "size": NUM_RECOMMENDATIONS,
             "query": {
                 "function_score": {
                     "query": {
@@ -158,8 +164,10 @@ def _query_opensearch_(queries):
                          )
         if r.status_code != 200:
             raise Exception("OpenSearch query failed: {}".format(r.text))
-        _id = json.loads(r.text)['hits']['hits'][0]['_source']['id']
-        restaurant_ids.append(_id)
+        _ids=[]
+        for i in range(NUM_RECOMMENDATIONS):
+            _ids.append(json.loads(r.text)['hits']['hits'][i]['_source']['id'])
+        restaurant_ids.append(_ids)
     return restaurant_ids
     
 

@@ -75,7 +75,7 @@ resource "aws_lambda_function" "lf2" {
   function_name = "LF2"
   filename      = "${path.module}/../../lambdafunctions/LF2/package/LF2.zip"
   runtime       = "python3.11"
-  handler       = "lf2.lambda_handler"
+  handler       = "LF2.lambda_handler"
   role          = aws_iam_role.lambda_exec.arn
   timeout       = 15
   environment {
