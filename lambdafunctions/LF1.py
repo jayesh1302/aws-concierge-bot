@@ -38,12 +38,17 @@ def delegate(session_attributes, slots):
         }
     }
 
-def validate_slots(dining_date, dining_time, num_ppl, cuisine, email):
+def validate_slots(location, dining_date, dining_time, num_ppl, cuisine, email):
     # Check if date and time is in the future
     current_datetime = datetime.now()
     dining_datetime = datetime.strptime(f"{dining_date} {dining_time}", "%Y-%m-%d %H:%M")
     if dining_datetime <= current_datetime:
         return "Please ensure the dining date and time are in the future."
+    
+    # Check location
+    supported_locations = ["NYC", "New York", "Manhattan", "Big Apple", "NY"]
+    if location.lower() not in supported_locations:
+        return "We only support the New York Area. Please try again later."
     
     # Check number of people
     if int(num_ppl) < 1:
@@ -90,7 +95,7 @@ def lambda_handler(event, context):
         email = slots['email']
 
         # Validate the slots
-        validation_error = validate_slots(dining_date, dining_time, number_of_people, cuisine, email)
+        validation_error = validate_slots(location, dining_date, dining_time, number_of_people, cuisine, email)
         if validation_error:
             return close({}, 'Failed', {
                 'contentType': 'PlainText',
