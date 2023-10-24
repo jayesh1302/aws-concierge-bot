@@ -46,7 +46,7 @@ def validate_slots(location, dining_date, dining_time, num_ppl, cuisine, email):
         return "Please ensure the dining date and time are in the future."
     
     # Check location
-    supported_locations = ["NYC", "New York", "Manhattan", "Big Apple", "NY"]
+    supported_locations = ["nyc", "new york", "manhattan", "big apple", "ny"]
     if location.lower() not in supported_locations:
         return "We only support the New York Area. Please try again later."
     
